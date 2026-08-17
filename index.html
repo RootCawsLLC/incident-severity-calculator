@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Incident Severity Calculator — OWASP Risk Rating, Applied Consistently</title>
+  <meta name="description" content="Rate a security finding or incident against the OWASP Risk Rating Methodology: sixteen factors, likelihood and impact scored separately, and one rubric every team rates against. Built by RootCaws LLC." />
+  <meta name="author" content="RootCaws LLC" />
+  <meta name="robots" content="noindex, follow" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Incident Severity Calculator" />
+  <meta property="og:description" content="Sixteen OWASP factors, likelihood and impact kept separate, and a severity every team derives the same way." />
+  <meta property="og:site_name" content="RootCaws LLC" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,600;1,9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    :root{
+      color-scheme:light;
+      --paper:#f7ebed;
+      --paper-2:#f0dee0;
+      --panel:#ffffff;
+      --ink:#3a3336;
+      --line:#d8c9cc;
+      --accent:#8d5860;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{
+      background:var(--paper);color:var(--ink);
+      font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;min-width:320px;
+    }
+    ::selection{background:#f4dcdf;color:var(--ink)}
+    a{color:var(--accent)}
+    a:hover{opacity:0.82}
+    a:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{
+      outline:2px solid var(--accent);outline-offset:3px;border-radius:4px;
+    }
+    select,input[type=text]{
+      font-family:'Inter',sans-serif;font-size:13.5px;color:var(--ink);
+      background:var(--panel);border:1px solid var(--line);border-radius:8px;
+      padding:8px 10px;width:100%;cursor:pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script>
+  'use strict';
+  const {useState,useMemo,useCallback,useEffect,createElement:h}=React;
+
+  const C={
+    bg:"#f7ebed",bgCard:"#ffffff",bgBand:"#f0dee0",
+    border:"#d8c9cc",borderSoft:"rgba(58,51,54,0.08)",
+    text:"#3a3336",textMuted:"#4d4548",textDim:"#7a7073",
+    accent:"#8d5860",accent2:"#c7848d",accentSoft:"#f4dcdf",
+    amber:"#9a6a24",amberSoft:"#f7e9d4",
+    sage:"#4c7359",sageSoft:"#e2eee6"
+  };
+  const ui="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+  const display="'Fraunces', Georgia, serif";
+
+  function useIsMobile(bp){const[m,setM]=useState(false);useEffect(()=>{const c=()=>setM(window.innerWidth<(bp||820));c();window.addEventListener("resize",c);return()=>window.removeEventListener("resize",c);},[bp]);return m;}
+
+  /* ---------------------------------------------------------------------------
+     The OWASP Risk Rating Methodology, reproduced faithfully. Sixteen factors in
+     four groups, each option carrying the score OWASP assigns it. Likelihood is
+     the mean of the eight threat-agent and vulnerability factors; impact is the
+     mean of the technical or business group, whichever the rater elects to drive
+     the outcome.
+  --------------------------------------------------------------------------- */
+  const GROUPS=[
+    {id:"agent",leg:"likelihood",title:"Threat agent factors",
+     blurb:"Who would do this, and what does it cost them to try?",
+     factors:[
+      {id:"skill",label:"Skill level",opts:[
+        [1,"No technical skills"],[3,"Some technical skills"],[5,"Advanced computer user"],
+        [6,"Network and programming skills"],[9,"Security penetration skills"]]},
+      {id:"motive",label:"Motive",opts:[
+        [1,"Low or no reward"],[4,"Possible reward"],[9,"High reward"]]},
+      {id:"opportunity",label:"Opportunity",opts:[
+        [0,"Full access or expensive resources required"],[4,"Special access or resources required"],
+        [7,"Some access or resources required"],[9,"No access or resources required"]]},
+      {id:"size",label:"Size of threat agent population",opts:[
+        [2,"Developers / system administrators"],[4,"Intranet users"],[5,"Partners"],
+        [6,"Authenticated users"],[9,"Anonymous internet users"]]}]},
+
+    {id:"vuln",leg:"likelihood",title:"Vulnerability factors",
+     blurb:"How easy is the weakness to find, use, and get away with?",
+     factors:[
+      {id:"discovery",label:"Ease of discovery",opts:[
+        [1,"Practically impossible"],[3,"Difficult"],[7,"Easy"],[9,"Automated tools available"]]},
+      {id:"exploit",label:"Ease of exploit",opts:[
+        [1,"Theoretical"],[3,"Difficult"],[5,"Easy"],[9,"Automated tools available"]]},
+      {id:"awareness",label:"Awareness",opts:[
+        [1,"Unknown"],[4,"Hidden"],[6,"Obvious"],[9,"Public knowledge"]]},
+      {id:"detection",label:"Intrusion detection",opts:[
+        [1,"Active detection in application"],[3,"Logged and reviewed"],
+        [8,"Logged without review"],[9,"Not logged"]]}]},
+
+    {id:"tech",leg:"technical",title:"Technical impact",
+     blurb:"What happens to the system, stated without reference to the business.",
+     factors:[
+      {id:"conf",label:"Loss of confidentiality",opts:[
+        [2,"Minimal non-sensitive data disclosed"],[6,"Minimal critical data disclosed"],
+        [6,"Extensive non-sensitive data disclosed"],[7,"Extensive critical data disclosed"],
+        [9,"All data disclosed"]]},
+      {id:"integ",label:"Loss of integrity",opts:[
+        [1,"Minimal slightly corrupt data"],[3,"Minimal seriously corrupt data"],
+        [5,"Extensive slightly corrupt data"],[7,"Extensive seriously corrupt data"],
+        [9,"All data totally corrupt"]]},
+      {id:"avail",label:"Loss of availability",opts:[
+        [1,"Minimal secondary services interrupted"],[5,"Minimal primary services interrupted"],
+        [5,"Extensive secondary services interrupted"],[7,"Extensive primary services interrupted"],
+        [9,"All services completely lost"]]},
+      {id:"account",label:"Loss of accountability",opts:[
+        [1,"Fully traceable"],[7,"Possibly traceable"],[9,"Completely anonymous"]]}]},
+
+    {id:"biz",leg:"business",title:"Business impact",
+     blurb:"What it costs the company. OWASP prefers this leg whenever you can actually estimate it.",
+     factors:[
+      {id:"financial",label:"Financial damage",opts:[
+        [1,"Less than the cost to fix the vulnerability"],[3,"Minor effect on annual profit"],
+        [7,"Significant effect on annual profit"],[9,"Bankruptcy"]]},
+      {id:"reputation",label:"Reputation damage",opts:[
+        [1,"Minimal damage"],[4,"Loss of major accounts"],[5,"Loss of goodwill"],[9,"Brand damage"]]},
+      {id:"compliance",label:"Non-compliance",opts:[
+        [2,"Minor violation"],[5,"Clear violation"],[7,"High profile violation"]]},
+      {id:"privacy",label:"Privacy violation",opts:[
+        [3,"One individual"],[5,"Hundreds of people"],[7,"Thousands of people"],[9,"Millions of people"]]}]}
+  ];
+
+  const ALL_FACTORS=GROUPS.flatMap(g=>g.factors.map(f=>Object.assign({},f,{group:g.id,leg:g.leg})));
+
+  function band(score){
+    if(score<3)return "LOW";
+    if(score<6)return "MEDIUM";
+    return "HIGH";
+  }
+  // The OWASP overall severity matrix. Impact rows, likelihood columns.
+  const MATRIX={
+    HIGH:  {LOW:"High",   MEDIUM:"Critical", HIGH:"Critical"},
+    MEDIUM:{LOW:"Medium", MEDIUM:"Medium",   HIGH:"High"},
+    LOW:   {LOW:"Note",   MEDIUM:"Low",      HIGH:"Medium"}
+  };
+  const SEV={
+    "Critical":{fg:"#8a2f2f",bg:"#f6dcdc",line:"#b04a44",
+      guide:"Page immediately. Treat containment as the priority over root-cause analysis, and open the materiality question in parallel rather than after."},
+    "High":{fg:C.accent,bg:C.accentSoft,line:C.accent,
+      guide:"Same-business-day response. Assign a named owner before the end of the day and set the remediation clock explicitly."},
+    "Medium":{fg:C.amber,bg:C.amberSoft,line:C.amber,
+      guide:"Scheduled remediation inside the normal cycle. Track it against a date; medium findings are the ones that quietly age."},
+    "Low":{fg:C.sage,bg:C.sageSoft,line:C.sage,
+      guide:"Queue with the backlog. Worth recording precisely so a cluster of low findings can be seen accumulating."},
+    "Note":{fg:C.textDim,bg:C.bgBand,line:C.border,
+      guide:"Record and move on. Still worth the entry — the rating is evidence that the question was asked."}
+  };
+
+  const cardStyle=(pad)=>({
+    background:C.bgCard,border:"1px solid "+C.border,borderRadius:16,
+    boxShadow:"0 10px 26px rgba(58,51,54,0.06)",padding:pad||"20px 24px"
+  });
+  const eyebrow={fontFamily:ui,fontSize:11,fontWeight:600,letterSpacing:"0.14em",textTransform:"uppercase"};
+  const labelStyle={fontFamily:ui,fontSize:11,fontWeight:600,letterSpacing:"0.07em",textTransform:"uppercase",color:C.textDim,display:"block",marginBottom:5};
+
+  // The portfolio risk lab renders this page in an iframe and carries the lesson
+  // copy in its own header, so the lesson act is skipped when we are embedded.
+  const EMBEDDED=(function(){try{return window.self!==window.top;}catch(e){return true;}})();
+
+  const BENCHMARKS_URL="./risk-benchmarks.json";
+  const CCY={USD:"$",AUD:"A$",CAD:"C$",GBP:"\u00a3"};
+
+  function parseAmount(raw){
+    if(raw==null)return 0;
+    const s=String(raw).trim().replace(/[^0-9.kmbKMB]/g,"");
+    const m=s.match(/^(\d*\.?\d+)([kmbKMB])?$/);
+    if(!m)return 0;
+    const mult={k:1e3,m:1e6,b:1e9}[(m[2]||"").toLowerCase()]||1;
+    return parseFloat(m[1])*mult;
+  }
+  function amt(v,c){
+    const s=CCY[c]||((c||"")+" ");
+    if(v>=1e9)return s+(v/1e9).toFixed(1)+"B";
+    if(v>=1e6)return s+(v/1e6).toFixed(1)+"M";
+    if(v>=1e3)return s+Math.round(v/1e3)+"K";
+    return s+Math.round(v);
+  }
+
+  // OWASP's financial-damage options are defined relative to annual profit but
+  // never quantified. With a profit figure and a published loss range, the
+  // rater can at least see which option the evidence is pointing at -- without
+  // the tool picking one, since that means choosing a percentile.
+  function FinancialAnchor({list,error,selected,onSelect,profit,onProfit,isMobile:mb}){
+    const bm=list.filter(b=>b.id===selected)[0];
+    const p=parseAmount(profit);
+    const wrap={marginTop:16,paddingTop:16,borderTop:"1px solid "+C.border};
+    const body={fontFamily:ui,fontSize:12.5,lineHeight:1.65,color:C.textDim,marginBottom:10};
+
+    if(error)return h('div',{style:wrap},
+      h('div',{style:body},"Loss benchmarks unavailable (",error,"). Score the factor as usual."));
+
+    const pct=v=>p>0?((v/p)*100):null;
+    const fmtPct=v=>{const x=pct(v);return x==null?"\u2014":(x>=10?x.toFixed(0):x.toFixed(1))+"% of profit";};
+
+    return h('div',{style:wrap},
+      h('div',{style:Object.assign({},labelStyle,{marginBottom:8})},
+        "Calibrate \u201cFinancial damage\u201d (optional)"),
+      h('div',{style:body},
+        "OWASP defines this factor against annual profit but never says what counts as minor. Enter a profit figure and pick a comparable published loss range to see the size of the thing you are scoring."),
+      h('div',{style:{display:"grid",gridTemplateColumns:mb?"1fr":"1fr 1fr",gap:12,marginBottom:12}},
+        h('div',null,
+          h('label',{style:labelStyle},"Annual profit"),
+          h('input',{type:"text",value:profit,placeholder:"120M",
+            onChange:e=>onProfit(e.target.value),"aria-label":"Annual profit"})),
+        h('div',null,
+          h('label',{style:labelStyle},"Comparable loss benchmark"),
+          h('select',{value:selected,onChange:e=>onSelect(e.target.value),
+            "aria-label":"Comparable loss benchmark"},
+            h('option',{value:""},list.length?"None":"Loading\u2026"),
+            list.map(b=>h('option',{key:b.id,value:b.id},b.label))))),
+      bm?h('div',null,
+        p>0?h('div',{style:{display:"grid",gridTemplateColumns:mb?"1fr":"repeat(3,1fr)",gap:10,marginBottom:10}},
+          [["Typical event",bm.impact.likely],["Bad event",bm.impact.max],["Floor",bm.impact.min]]
+            .map(([lbl,v])=>h('div',{key:lbl,style:{background:C.bg,border:"1px solid "+C.border,
+              borderRadius:10,padding:"10px 12px"}},
+              h('div',{style:{fontFamily:ui,fontSize:9.5,fontWeight:600,letterSpacing:"0.08em",
+                textTransform:"uppercase",color:C.textDim,marginBottom:4}},lbl),
+              h('div',{style:{fontFamily:display,fontSize:mb?17:19,fontWeight:700,color:C.text,lineHeight:1.1}},
+                amt(v,bm.currency)),
+              h('div',{style:{fontFamily:ui,fontSize:11,color:C.textDim,marginTop:2}},fmtPct(v)))))
+          :h('div',{style:body},"Enter an annual profit figure to see these losses as a share of it."),
+        h('div',{style:{background:C.sageSoft,borderLeft:"3px solid "+C.sage,borderRadius:6,
+          padding:"9px 12px",fontFamily:ui,fontSize:12,lineHeight:1.6,color:C.textMuted,marginBottom:10}},
+          h('strong',{style:{color:C.sage}},"The tool does not pick an option for you. "),
+          "Reading a single score off a distribution means choosing a percentile, and that is your judgment to record, not arithmetic. Note also that this range describes a population of organisations, not the finding in front of you, and that profit and the benchmark must be in the same currency \u2014 this shard is in ",
+          bm.currency,"."),
+        h('details',null,
+          h('summary',{style:{cursor:"pointer",fontFamily:ui,fontSize:12,color:C.textMuted}},
+            "Sources behind this range (",Object.keys(bm.provenance||{}).length,")"),
+          h('ul',{style:{margin:"10px 0 0 18px"}},
+            Object.keys(bm.provenance||{}).map(k=>{
+              const pr=bm.provenance[k];
+              return h('li',{key:k,style:{fontFamily:ui,fontSize:11.5,color:C.textDim,
+                lineHeight:1.55,marginBottom:8}},
+                k," \u2014 ",
+                pr.url?h('a',{href:pr.url,target:"_blank",rel:"noopener",style:{color:C.accent}},pr.source_name)
+                      :(pr.source_name||"unattributed"),
+                pr.confidence?" \u00b7 "+pr.confidence+" confidence":"",
+                pr.limitations?h('div',{style:{fontSize:11,marginTop:2}},pr.limitations):null);
+            })))):null);
+  }
+
+  function App(){
+    const mb=useIsMobile();
+    const [ref,setRef]=useState("");
+    const [impactLeg,setImpactLeg]=useState("business");
+
+    const [vals,setVals]=useState(()=>{
+      const v={};
+      // Seed with the middle option of each factor so the page opens on a
+      // plausible finding rather than an all-zero one nobody would file.
+      ALL_FACTORS.forEach(f=>{v[f.id]=f.opts[Math.floor(f.opts.length/2)][0];});
+      return v;
+    });
+    const setVal=useCallback((id,v)=>setVals(p=>Object.assign({},p,{[id]:v})),[]);
+
+    const scores=useMemo(()=>{
+      const mean=ids=>{
+        const xs=ids.map(i=>vals[i]);
+        return xs.reduce((a,b)=>a+b,0)/xs.length;
+      };
+      const likelihood=mean(ALL_FACTORS.filter(f=>f.leg==="likelihood").map(f=>f.id));
+      const technical=mean(ALL_FACTORS.filter(f=>f.leg==="technical").map(f=>f.id));
+      const business=mean(ALL_FACTORS.filter(f=>f.leg==="business").map(f=>f.id));
+      const impact=impactLeg==="business"?business:technical;
+      const severity=MATRIX[band(impact)][band(likelihood)];
+      return{likelihood,technical,business,impact,severity};
+    },[vals,impactLeg]);
+
+    const sv=SEV[scores.severity];
+
+    const summary=useMemo(()=>{
+      const L=[];
+      L.push("INCIDENT / FINDING SEVERITY RATING — OWASP Risk Rating Methodology");
+      L.push("");
+      L.push("Reference: "+(ref||"[reference]"));
+      L.push("");
+      L.push("Likelihood        "+scores.likelihood.toFixed(2)+"  ("+band(scores.likelihood)+")");
+      L.push("Technical impact  "+scores.technical.toFixed(2)+"  ("+band(scores.technical)+")");
+      L.push("Business impact   "+scores.business.toFixed(2)+"  ("+band(scores.business)+")");
+      L.push("Impact leg used:  "+(impactLeg==="business"?"business":"technical"));
+      L.push("");
+      L.push("OVERALL SEVERITY: "+scores.severity.toUpperCase());
+      L.push("");
+      L.push("Factor detail");
+      GROUPS.forEach(g=>{
+        L.push("  "+g.title);
+        g.factors.forEach(f=>{
+          const opt=f.opts.find(o=>o[0]===vals[f.id]);
+          L.push("    "+String(vals[f.id]).padStart(2)+"  "+f.label+" — "+(opt?opt[1]:"?"));
+        });
+      });
+      L.push("");
+      L.push("Scores are the arithmetic mean of the factors in each leg, per the OWASP");
+      L.push("methodology. Overall severity is read from the OWASP likelihood x impact matrix.");
+      return L.join("\n");
+    },[ref,scores,vals,impactLeg]);
+
+    const [copied,setCopied]=useState(false);
+
+    // Read-only: used to calibrate one factor, never to score it.
+    const [bmList,setBmList]=useState([]);
+    const [bmError,setBmError]=useState(null);
+    const [bmSel,setBmSel]=useState("");
+    const [profit,setProfit]=useState("");
+    useEffect(()=>{
+      let live=true;
+      fetch(BENCHMARKS_URL)
+        .then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.json();})
+        .then(d=>{if(live)setBmList(d.benchmarks||[]);})
+        .catch(e=>{if(live)setBmError(e.message);});
+      return()=>{live=false;};
+    },[]);
+    const copy=useCallback(()=>{
+      const done=()=>{setCopied(true);setTimeout(()=>setCopied(false),2200);};
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(summary).then(done).catch(()=>{});
+      }else{
+        const ta=document.createElement("textarea");ta.value=summary;document.body.appendChild(ta);
+        ta.select();try{document.execCommand("copy");done();}catch(e){}document.body.removeChild(ta);
+      }
+    },[summary]);
+
+    const pd=mb?16:24;
+    const prose={fontFamily:ui,fontSize:mb?15:16,lineHeight:1.75,color:C.textMuted};
+
+    return h('div',{style:{maxWidth:1000,margin:"0 auto",
+      padding:EMBEDDED?(mb?"4px 16px 64px":"8px 24px 96px"):(mb?"28px 16px 64px":"48px 24px 96px")}},
+
+      !EMBEDDED&&h('div',{style:{marginBottom:mb?32:44}},
+        h('div',{style:Object.assign({},eyebrow,{color:C.amber,marginBottom:12})},"The lesson"),
+        h('h1',{style:{fontFamily:display,fontSize:mb?32:44,fontWeight:700,lineHeight:1.12,marginBottom:18,color:C.text}},
+          "The rubric matters more than the ",h('em',{style:{fontStyle:"italic",color:C.accent}},"rating")),
+        h('p',{style:Object.assign({},prose,{marginBottom:14})},
+          "Ask three engineers to rate the same finding and you will get three answers, because each is rating against their own sense of what \"high\" means. The disagreement is not really about the finding. It is about the absence of a shared scale."),
+        h('p',{style:Object.assign({},prose,{marginBottom:14})},
+          "The OWASP Risk Rating Methodology fixes that by refusing to ask the question directly. Instead of \"how bad is this,\" it asks sixteen narrower questions with pre-scored answers — how skilled must the attacker be, how large is the population who could try, is this logged, is it public knowledge — and derives severity from the arithmetic."),
+        h('p',{style:prose},
+          "The value is not precision. These are ordinal judgments averaged together, which is not a defensible statistical operation. The value is that two people rating the same thing now land in the same place, and when they disagree they can point at the specific factor they disagree about.")),
+
+      h('div',{style:Object.assign({},eyebrow,{color:C.accent,marginBottom:16})},"The tool"),
+
+      h('div',{style:Object.assign({},cardStyle(pd),{marginBottom:18})},
+        h('label',{style:labelStyle},"Finding or incident reference"),
+        h('input',{type:"text",value:ref,placeholder:"FND-2026-0413 — stored XSS in the admin console",
+          onChange:e=>setRef(e.target.value),"aria-label":"Finding reference"})),
+
+      GROUPS.map(g=>h('div',{key:g.id,style:Object.assign({},cardStyle(pd),{marginBottom:18})},
+        h('div',{style:{marginBottom:16}},
+          h('div',{style:Object.assign({},eyebrow,{fontSize:12,color:g.leg==="likelihood"?C.accent:g.leg==="technical"?C.amber:C.sage,marginBottom:6})},g.title),
+          h('div',{style:{fontFamily:ui,fontSize:13.5,lineHeight:1.6,color:C.textDim}},g.blurb)),
+        h('div',{style:{display:"grid",gridTemplateColumns:mb?"1fr":"1fr 1fr",gap:mb?12:16}},
+          g.factors.map(f=>h('div',{key:f.id},
+            h('label',{style:labelStyle},f.label),
+            h('select',{value:vals[f.id],onChange:e=>setVal(f.id,parseInt(e.target.value,10)),
+              "aria-label":f.label},
+              f.opts.map((o,i)=>h('option',{key:i,value:o[0]},o[0]+" — "+o[1])))))),
+        g.id==="biz"?h(FinancialAnchor,{list:bmList,error:bmError,selected:bmSel,
+          onSelect:setBmSel,profit:profit,onProfit:setProfit,isMobile:mb}):null)),
+
+      h('div',{style:Object.assign({},cardStyle(pd),{marginBottom:18})},
+        h('div',{style:Object.assign({},eyebrow,{fontSize:12,color:C.accent,marginBottom:12})},"Which impact leg drives the rating?"),
+        h('div',{style:{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}},
+          [["business","Business impact"],["technical","Technical impact"]].map(([v,lbl])=>
+            h('button',{key:v,onClick:()=>setImpactLeg(v),"aria-pressed":impactLeg===v,
+              style:{fontFamily:ui,fontSize:12.5,fontWeight:600,cursor:"pointer",padding:"8px 16px",
+                borderRadius:999,border:"1px solid "+(impactLeg===v?C.text:C.border),
+                background:impactLeg===v?C.text:"transparent",color:impactLeg===v?"#fff":C.textDim}},lbl))),
+        h('div',{style:{fontFamily:ui,fontSize:13,lineHeight:1.6,color:C.textDim}},
+          "OWASP is explicit that business impact should win when you can estimate it credibly, because a technically severe finding on a system nobody depends on is not a severe business problem. Technical impact is the honest fallback when nobody on the call can speak to revenue or customers.")),
+
+      h('div',{style:{display:"grid",gridTemplateColumns:mb?"1fr 1fr":"repeat(3,1fr)",gap:12,marginBottom:18}},
+        [["Likelihood",scores.likelihood,C.accent],
+         ["Technical impact",scores.technical,C.amber],
+         ["Business impact",scores.business,C.sage]
+        ].map(([lbl,val,col])=>h('div',{key:lbl,style:{
+            background:C.bgCard,border:"1px solid "+C.border,borderRadius:12,padding:"14px 16px"}},
+          h('div',{style:{fontFamily:ui,fontSize:10,fontWeight:600,letterSpacing:"0.09em",textTransform:"uppercase",color:C.textDim,marginBottom:6}},lbl),
+          h('div',{style:{fontFamily:display,fontSize:mb?22:27,fontWeight:700,color:col,lineHeight:1.05}},val.toFixed(2)),
+          h('div',{style:{fontFamily:ui,fontSize:12,fontWeight:600,color:C.textDim,marginTop:4}},band(val))))),
+
+      h('div',{style:{background:sv.bg,border:"1px solid "+sv.line+"55",borderLeft:"4px solid "+sv.line,
+          borderRadius:14,padding:pd,marginBottom:18}},
+        h('div',{style:Object.assign({},eyebrow,{color:sv.fg,marginBottom:10})},"Overall severity"),
+        h('div',{style:{fontFamily:display,fontSize:mb?30:38,fontWeight:700,color:sv.fg,lineHeight:1.1,marginBottom:10}},scores.severity),
+        h('p',{style:{fontFamily:ui,fontSize:14.5,lineHeight:1.65,color:C.textMuted,marginBottom:10}},
+          band(scores.impact)+" impact against "+band(scores.likelihood)+" likelihood, read from the OWASP matrix."),
+        h('p',{style:{fontFamily:ui,fontSize:14.5,lineHeight:1.65,color:C.textMuted}},sv.guide)),
+
+      h('div',{style:Object.assign({},cardStyle(pd),{marginBottom:18})},
+        h('div',{style:Object.assign({},eyebrow,{fontSize:12,color:C.accent,marginBottom:14})},"The OWASP matrix"),
+        h('div',{style:{overflowX:"auto"}},
+          h('table',{style:{borderCollapse:"collapse",width:"100%",minWidth:420,fontFamily:ui,fontSize:13}},
+            h('thead',null,h('tr',null,
+              h('th',{style:{padding:"8px 10px",textAlign:"left",color:C.textDim,fontWeight:600,fontSize:11,letterSpacing:"0.07em",textTransform:"uppercase"}},"Impact ↓ / Likelihood →"),
+              ["LOW","MEDIUM","HIGH"].map(l=>h('th',{key:l,style:{padding:"8px 10px",color:C.textDim,fontWeight:600,fontSize:11,letterSpacing:"0.07em"}},l)))),
+            h('tbody',null,
+              ["HIGH","MEDIUM","LOW"].map(imp=>h('tr',{key:imp},
+                h('td',{style:{padding:"8px 10px",fontWeight:600,color:C.textMuted,borderTop:"1px solid "+C.borderSoft}},imp),
+                ["LOW","MEDIUM","HIGH"].map(lk=>{
+                  const cell=MATRIX[imp][lk];
+                  const on=band(scores.impact)===imp&&band(scores.likelihood)===lk;
+                  return h('td',{key:lk,style:{padding:"8px 10px",textAlign:"center",
+                    borderTop:"1px solid "+C.borderSoft,
+                    background:on?SEV[cell].bg:"transparent",
+                    color:on?SEV[cell].fg:C.textDim,
+                    fontWeight:on?700:500,
+                    outline:on?"2px solid "+SEV[cell].line:"none"}},cell);
+                })))))) ),
+
+      h('div',{style:Object.assign({},cardStyle(pd),{marginBottom:32})},
+        h('div',{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:10}},
+          h('div',{style:Object.assign({},eyebrow,{fontSize:12,color:C.accent})},"Rating record"),
+          h('button',{onClick:copy,
+            style:{fontFamily:ui,fontSize:12.5,fontWeight:600,cursor:"pointer",padding:"8px 16px",
+              borderRadius:999,border:"1px solid "+C.accent,
+              background:copied?C.accent:"transparent",color:copied?"#fff":C.accent}},
+            copied?"Copied":"Copy record")),
+        h('pre',{style:{fontFamily:"ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+            fontSize:mb?11:12.5,lineHeight:1.6,color:C.textMuted,background:C.bg,
+            border:"1px solid "+C.border,borderRadius:12,padding:mb?12:18,
+            overflowX:"auto",whiteSpace:"pre-wrap",wordBreak:"break-word"}},summary)),
+
+      h('div',null,
+        h('div',{style:Object.assign({},eyebrow,{color:C.sage,marginBottom:12})},"The takeaway"),
+        h('p',{style:Object.assign({},prose,{marginBottom:14})},
+          "Standardising the rubric is what actually moves triage time, and the mechanism is not that the ratings get more accurate. It is that the argument moves from \"I think this is high\" to \"you scored intrusion detection at 9 and I scored it at 3\" — a question with an answer someone can go look up."),
+        h('p',{style:Object.assign({},prose,{marginBottom:14})},
+          "Two cautions. Averaging ordinal scores is not sound measurement, so treat the decimals as a sorting aid and never as a quantity. And severity is not materiality: a critical finding may be immaterial to a filer, and a medium one touching regulated data may not be. They are different questions with different audiences."),
+        h('p',{style:prose},
+          "For the second question, see the ",
+          h('a',{href:"https://rootcawsllc.github.io/cyber-materiality-workbench/"},"Cyber Materiality Workbench"),
+          ", which picks up where this leaves off.")),
+
+      h('div',{style:{marginTop:36,paddingTop:20,borderTop:"1px solid "+C.border,
+          fontFamily:ui,fontSize:12,lineHeight:1.65,color:C.textDim}},
+        "Factor definitions and scores follow the ",
+        h('a',{href:"https://owasp.org/www-community/OWASP_Risk_Rating_Methodology"},"OWASP Risk Rating Methodology"),
+        ", which is published by the OWASP Foundation under CC BY-SA. Nothing you enter leaves your browser — there is no server, no storage, and no telemetry."));
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+  </script>
+</body>
+</html>
