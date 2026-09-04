@@ -46,7 +46,7 @@
       padding:8px 10px;width:100%;cursor:pointer;
     }
     /* Risk-lab shell: masthead, gutters, headings, carded notes. Shared with the other tools. */
-    :root{--ink-2:#4d4548;--muted:#7a7073;--soft-line:rgba(58,51,54,.08)}
+    :root{--ink-2:#4d4548;--muted:#7a7073;--soft-line:rgba(58,51,54,.08);--sage:#4c7359}
     .wrap{max-width:1400px;margin:0 auto;padding:0 24px}
     @media (max-width:767px){.wrap{padding:0 16px}}
     .masthead{padding-top:48px;padding-bottom:28px;margin-bottom:24px;border-bottom:1px solid var(--soft-line)}
@@ -64,6 +64,21 @@
     .note p{font-family:'Inter',sans-serif;font-size:14px;color:var(--ink-2);line-height:1.65}
     .note p+p{margin-top:8px}
     .notes.embedded{padding-top:6px}
+    .guide{padding:4px 0 28px}
+    .guide h2{font-family:'Inter',sans-serif;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:28px 0 12px;padding-bottom:10px;border-bottom:1px solid var(--soft-line)}
+    .guide h2:first-of-type{margin-top:0}
+    .guide-toc{display:flex;flex-wrap:wrap;gap:.35rem .9rem;margin:0 0 18px;font-size:13px;font-family:'Inter',sans-serif}
+    .guide-toc a{color:var(--accent)}
+    .guide-pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    @media (max-width:699px){.guide-pair{grid-template-columns:1fr}}
+    .guide-box{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 26px rgba(58,51,54,.07);padding:16px 18px}
+    .guide-box.use{border-left:3px solid var(--sage)}
+    .guide-box.dont{border-left:3px solid var(--accent)}
+    .guide-box h3{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:18px;margin:0 0 8px;letter-spacing:-.01em;color:var(--ink)}
+    .guide-box ul,.guide ol{margin:0;padding-left:1.15rem}
+    .guide li{font-family:'Inter',sans-serif;font-size:14px;color:var(--ink-2);line-height:1.65;margin:.4rem 0}
+    .guide li b{color:var(--ink);font-weight:600}
+    .guide-close{font-family:'Inter',sans-serif;font-size:14px;color:var(--ink-2);line-height:1.65;margin:10px 0 0}
     .colophon{margin-top:28px;padding:20px 0 64px;border-top:1px solid var(--line);font-family:'Inter',sans-serif;font-size:12px;line-height:1.65;color:var(--muted)}
   </style>
 </head>
@@ -277,6 +292,37 @@
             })))):null);
   }
 
+  function Guide(){
+    return h('section',{className:"guide","aria-label":"How to use this"},
+      h('nav',{className:"guide-toc","aria-label":"On this page"},
+        h('a',{href:"#when"},"When to use it"),
+        h('a',{href:"#how"},"How to use it"),
+        h('a',{href:"#org"},"Take it into your org")),
+      h('h2',{id:"when"},"When and where to use it"),
+      h('div',{className:"guide-pair"},
+        h('div',{className:"guide-box use"},h('h3',null,"Use it when"),
+          h('ul',null,
+            h('li',null,"Two teams rate the same finding differently and the argument is still “I think this is high.”"),
+            h('li',null,"You need a shared rubric before a triage SLA, so disagreement lands on a factor someone can check."),
+            h('li',null,"A finding is about to enter a materiality conversation and the severity derivation has to sit on paper."))),
+        h('div',{className:"guide-box dont"},h('h3',null,"Do not use it when"),
+          h('ul',null,
+            h('li',null,"You are about to treat the decimal as a quantity, or feed it to a loss model. Averaging ordinal scores is not measurement."),
+            h('li',null,"You are answering materiality. A critical finding may be immaterial to a filer, and a medium one touching regulated data may not be. Different question, different audience.")))),
+      h('h2',{id:"how"},"How to use it"),
+      h('ol',null,
+        h('li',null,h('b',null,"Rate. "),"Sixteen narrower questions: threat agent and vulnerability on the likelihood leg, technical and business impact on the other. Each option carries the score OWASP assigns it."),
+        h('li',null,h('b',null,"Let business impact win when you can estimate it. "),"A technically severe finding on a system nobody depends on is not a severe business problem. Technical impact is the honest fallback."),
+        h('li',null,h('b',null,"Copy the rating record. "),"Every factor selection sits next to the result, so the argument becomes “you scored intrusion detection at 9 and I scored it at 3.”")),
+      h('h2',{id:"org"},"Take it into your organisation"),
+      h('ol',null,
+        h('li',null,h('b',null,"Adopt one rubric and refuse a rating that does not cite it. "),"This one or another. The mechanism is the shared scale, not this page."),
+        h('li',null,h('b',null,"Require the sixteen answers in the ticket, not just the band. "),"When two raters disagree, they meet on the factor."),
+        h('li',null,h('b',null,"Never put the OWASP decimal into a FAIR model. "),"Severity sorts the queue. Frequency and loss price the risk."),
+        h('li',null,h('b',null,"Hand material findings to a materiality analysis. "),"The Cyber Materiality Workbench picks up where this leaves off.")),
+      h('p',{className:"guide-close"},"The notes below are the honest limits. The decimals are a sorting aid. They are not a quantity."));
+  }
+
   function App(){
     const mb=useIsMobile();
     const [ref,setRef]=useState("");
@@ -373,6 +419,7 @@
           "The OWASP Risk Rating Methodology fixes that by refusing to ask the question directly. Instead of \"how bad is this,\" it asks sixteen narrower questions with pre-scored answers — how skilled must the attacker be, how large is the population who could try, is this logged, is it public knowledge — and derives severity from the arithmetic."),
         h('p',{className:"deck"},
           "The value is not precision. These are ordinal judgments averaged together, which is not a defensible statistical operation. The value is that two people rating the same thing now land in the same place, and when they disagree they can point at the specific factor they disagree about.")),
+      !EMBEDDED&&h(Guide),
 
       h('div',{style:Object.assign({},cardStyle(pd),{marginBottom:18})},
         h('label',{style:labelStyle},"Finding or incident reference"),
