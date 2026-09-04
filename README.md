@@ -5,7 +5,7 @@ likelihood and impact kept separate, and one rubric every team derives their ans
 
 **Live:** https://rootcawsllc.github.io/incident-severity-calculator/
 
-![The Business impact group with Financial damage rated "7 — Significant effect on annual profit". Beneath it a calibration panel with an annual profit of 120M and a US financial-services data-breach benchmark selected, showing a typical event of $329K at 0.3% of profit, a bad event of $11.5M at 9.6%, and a floor of $152K at 0.1% — alongside a note that the tool does not pick an option for the rater](preview.png)
+![The calculator on the risk-lab shell. A full-width introduction under the lab kicker, then the four factor groups as cards with Fraunces headings, the impact-leg choice, three score tiles, a Critical severity banner read from the OWASP matrix, the matrix with the active cell highlighted, the copyable rating record, and three closing notes in cards](preview.png)
 
 ## Why this exists
 
