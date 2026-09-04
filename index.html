@@ -471,6 +471,16 @@
         ", which is published by the OWASP Foundation under CC BY-SA. Nothing you enter leaves your browser — there is no server, no storage, and no telemetry."));
   }
 
+  // Embedded in the portfolio risk lab, which is on another origin and cannot
+  // measure this document. Report the page height so the frame can fit it.
+  if(EMBEDDED){
+    let lastHeight=0;
+    const reportHeight=()=>{const h=Math.ceil(document.documentElement.getBoundingClientRect().height);if(h>0&&h!==lastHeight){lastHeight=h;window.parent.postMessage({type:"risk-lab:height",height:h},"*");}};
+    if(typeof ResizeObserver!=="undefined")new ResizeObserver(reportHeight).observe(document.body);
+    window.addEventListener("load",reportHeight);
+    setTimeout(reportHeight,0);
+  }
+
   ReactDOM.createRoot(document.getElementById('root')).render(h(App));
   </script>
 </body>
