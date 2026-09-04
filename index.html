@@ -45,6 +45,26 @@
       background:var(--panel);border:1px solid var(--line);border-radius:8px;
       padding:8px 10px;width:100%;cursor:pointer;
     }
+    /* Risk-lab shell: masthead, gutters, headings, carded notes. Shared with the other tools. */
+    :root{--ink-2:#4d4548;--muted:#7a7073;--soft-line:rgba(58,51,54,.08)}
+    .wrap{max-width:1400px;margin:0 auto;padding:0 24px}
+    @media (max-width:767px){.wrap{padding:0 16px}}
+    .masthead{padding-top:48px;padding-bottom:28px;margin-bottom:24px;border-bottom:1px solid var(--soft-line)}
+    .kicker{font-family:'Inter',sans-serif;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+    .masthead h1{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:clamp(34px,4.6vw,56px);line-height:1.02;letter-spacing:-.02em;margin:10px 0 14px;color:var(--ink)}
+    .masthead h1 em{font-style:italic;color:var(--accent)}
+    .deck{font-family:'Inter',sans-serif;font-size:17px;color:var(--ink-2);line-height:1.6;margin-bottom:12px}
+    .deck:last-child{margin-bottom:0}
+    .panel-h{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:20px;letter-spacing:-.01em;color:var(--ink);margin-bottom:8px}
+    .notes{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding-top:20px;padding-bottom:8px}
+    .notes::before{content:"Notes";grid-column:1/-1;font-family:'Inter',sans-serif;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding-bottom:10px;border-bottom:1px solid var(--soft-line)}
+    .note{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 26px rgba(58,51,54,.07);padding:18px 20px}
+    @media (max-width:899px){.notes{grid-template-columns:1fr}}
+    .note h3{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:19px;margin-bottom:8px;letter-spacing:-.01em;color:var(--ink)}
+    .note p{font-family:'Inter',sans-serif;font-size:14px;color:var(--ink-2);line-height:1.65}
+    .note p+p{margin-top:8px}
+    .notes.embedded{padding-top:6px}
+    .colophon{margin-top:28px;padding:20px 0 64px;border-top:1px solid var(--line);font-family:'Inter',sans-serif;font-size:12px;line-height:1.65;color:var(--muted)}
   </style>
 </head>
 <body>
@@ -341,21 +361,18 @@
     const pd=mb?16:24;
     const prose={fontFamily:ui,fontSize:mb?15:16,lineHeight:1.75,color:C.textMuted};
 
-    return h('div',{style:{maxWidth:1000,margin:"0 auto",
-      padding:EMBEDDED?(mb?"4px 16px 64px":"8px 24px 96px"):(mb?"28px 16px 64px":"48px 24px 96px")}},
+    return h('div',{className:"wrap",style:{paddingTop:EMBEDDED?(mb?4:8):0}},
 
-      !EMBEDDED&&h('div',{style:{marginBottom:mb?32:44}},
-        h('div',{style:Object.assign({},eyebrow,{color:C.amber,marginBottom:12})},"The lesson"),
-        h('h1',{style:{fontFamily:display,fontSize:mb?32:44,fontWeight:700,lineHeight:1.12,marginBottom:18,color:C.text}},
-          "The rubric matters more than the ",h('em',{style:{fontStyle:"italic",color:C.accent}},"rating")),
-        h('p',{style:Object.assign({},prose,{marginBottom:14})},
+      !EMBEDDED&&h('header',{className:"masthead"},
+        h('div',{className:"kicker"},"RootCaws · Risk lab"),
+        h('h1',null,
+          "The rubric matters more than the ",h('em',null,"rating")),
+        h('p',{className:"deck"},
           "Ask three engineers to rate the same finding and you will get three answers, because each is rating against their own sense of what \"high\" means. The disagreement is not really about the finding. It is about the absence of a shared scale."),
-        h('p',{style:Object.assign({},prose,{marginBottom:14})},
+        h('p',{className:"deck"},
           "The OWASP Risk Rating Methodology fixes that by refusing to ask the question directly. Instead of \"how bad is this,\" it asks sixteen narrower questions with pre-scored answers — how skilled must the attacker be, how large is the population who could try, is this logged, is it public knowledge — and derives severity from the arithmetic."),
-        h('p',{style:prose},
+        h('p',{className:"deck"},
           "The value is not precision. These are ordinal judgments averaged together, which is not a defensible statistical operation. The value is that two people rating the same thing now land in the same place, and when they disagree they can point at the specific factor they disagree about.")),
-
-      h('div',{style:Object.assign({},eyebrow,{color:C.accent,marginBottom:16})},"The tool"),
 
       h('div',{style:Object.assign({},cardStyle(pd),{marginBottom:18})},
         h('label',{style:labelStyle},"Finding or incident reference"),
@@ -364,7 +381,7 @@
 
       GROUPS.map(g=>h('div',{key:g.id,style:Object.assign({},cardStyle(pd),{marginBottom:18})},
         h('div',{style:{marginBottom:16}},
-          h('div',{style:Object.assign({},eyebrow,{fontSize:12,color:g.leg==="likelihood"?C.accent:g.leg==="technical"?C.amber:C.sage,marginBottom:6})},g.title),
+          h('div',{className:"panel-h",style:{color:g.leg==="likelihood"?C.accent:g.leg==="technical"?C.amber:C.sage}},g.title),
           h('div',{style:{fontFamily:ui,fontSize:13.5,lineHeight:1.6,color:C.textDim}},g.blurb)),
         h('div',{style:{display:"grid",gridTemplateColumns:mb?"1fr":"1fr 1fr",gap:mb?12:16}},
           g.factors.map(f=>h('div',{key:f.id},
@@ -376,7 +393,7 @@
           onSelect:setBmSel,profit:profit,onProfit:setProfit,isMobile:mb}):null)),
 
       h('div',{style:Object.assign({},cardStyle(pd),{marginBottom:18})},
-        h('div',{style:Object.assign({},eyebrow,{fontSize:12,color:C.accent,marginBottom:12})},"Which impact leg drives the rating?"),
+        h('div',{className:"panel-h",style:{marginBottom:12}},"Which impact leg drives the rating?"),
         h('div',{style:{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}},
           [["business","Business impact"],["technical","Technical impact"]].map(([v,lbl])=>
             h('button',{key:v,onClick:()=>setImpactLeg(v),"aria-pressed":impactLeg===v,
@@ -405,7 +422,7 @@
         h('p',{style:{fontFamily:ui,fontSize:14.5,lineHeight:1.65,color:C.textMuted}},sv.guide)),
 
       h('div',{style:Object.assign({},cardStyle(pd),{marginBottom:18})},
-        h('div',{style:Object.assign({},eyebrow,{fontSize:12,color:C.accent,marginBottom:14})},"The OWASP matrix"),
+        h('div',{className:"panel-h",style:{marginBottom:14}},"The OWASP matrix"),
         h('div',{style:{overflowX:"auto"}},
           h('table',{style:{borderCollapse:"collapse",width:"100%",minWidth:420,fontFamily:ui,fontSize:13}},
             h('thead',null,h('tr',null,
@@ -427,7 +444,7 @@
 
       h('div',{style:Object.assign({},cardStyle(pd),{marginBottom:32})},
         h('div',{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:10}},
-          h('div',{style:Object.assign({},eyebrow,{fontSize:12,color:C.accent})},"Rating record"),
+          h('div',{className:"panel-h",style:{marginBottom:0}},"Rating record"),
           h('button',{onClick:copy,
             style:{fontFamily:ui,fontSize:12.5,fontWeight:600,cursor:"pointer",padding:"8px 16px",
               borderRadius:999,border:"1px solid "+C.accent,
@@ -438,19 +455,17 @@
             border:"1px solid "+C.border,borderRadius:12,padding:mb?12:18,
             overflowX:"auto",whiteSpace:"pre-wrap",wordBreak:"break-word"}},summary)),
 
-      h('div',null,
-        h('div',{style:Object.assign({},eyebrow,{color:C.sage,marginBottom:12})},"The takeaway"),
-        h('p',{style:Object.assign({},prose,{marginBottom:14})},
-          "Standardising the rubric is what actually moves triage time, and the mechanism is not that the ratings get more accurate. It is that the argument moves from \"I think this is high\" to \"you scored intrusion detection at 9 and I scored it at 3\" — a question with an answer someone can go look up."),
-        h('p',{style:Object.assign({},prose,{marginBottom:14})},
-          "Two cautions. Averaging ordinal scores is not sound measurement, so treat the decimals as a sorting aid and never as a quantity. And severity is not materiality: a critical finding may be immaterial to a filer, and a medium one touching regulated data may not be. They are different questions with different audiences."),
-        h('p',{style:prose},
-          "For the second question, see the ",
-          h('a',{href:"https://rootcawsllc.github.io/cyber-materiality-workbench/"},"Cyber Materiality Workbench"),
-          ", which picks up where this leaves off.")),
+      h('section',{className:"notes"+(EMBEDDED?" embedded":""),"aria-label":"Notes"},
+        h('div',{className:"note"},h('h3',null,"Why standardising works"),
+          h('p',null,"Standardising the rubric is what actually moves triage time, and the mechanism is not that the ratings get more accurate. It is that the argument moves from \"I think this is high\" to \"you scored intrusion detection at 9 and I scored it at 3\" — a question with an answer someone can go look up.")),
+        h('div',{className:"note"},h('h3',null,"Two cautions"),
+          h('p',null,"Averaging ordinal scores is not sound measurement, so treat the decimals as a sorting aid and never as a quantity. And severity is not materiality: a critical finding may be immaterial to a filer, and a medium one touching regulated data may not be. They are different questions with different audiences.")),
+        h('div',{className:"note"},h('h3',null,"Where this hands off"),
+          h('p',null,"For the materiality question, see the ",
+            h('a',{href:"https://rootcawsllc.github.io/cyber-materiality-workbench/"},"Cyber Materiality Workbench"),
+            ", which picks up where this leaves off."))),
 
-      h('div',{style:{marginTop:36,paddingTop:20,borderTop:"1px solid "+C.border,
-          fontFamily:ui,fontSize:12,lineHeight:1.65,color:C.textDim}},
+      h('div',{className:"colophon"},
         "Factor definitions and scores follow the ",
         h('a',{href:"https://owasp.org/www-community/OWASP_Risk_Rating_Methodology"},"OWASP Risk Rating Methodology"),
         ", which is published by the OWASP Foundation under CC BY-SA. Nothing you enter leaves your browser — there is no server, no storage, and no telemetry."));
